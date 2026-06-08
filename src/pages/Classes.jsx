@@ -405,8 +405,8 @@ const Classes = () => {
                 <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', maxWidth: '480px', width: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh', pointerEvents: 'auto' }}>
                   <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <div>
-                      <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#1a1a2e', marginBottom: '6px' }}>O'qituvchi qo'shish</h2>
-                      <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>Bitta yoki bir nechta o'qituvchini tanlang</p>
+                      <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#1a1a2e', marginBottom: '6px' }}>{t('addTeacher')}</h2>
+                      <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>{t('selectTeachers')}</p>
                     </div>
                     <button onClick={() => { setTeacherModalOpen(false); setTeacherSearchQuery(''); }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '2px' }}>
