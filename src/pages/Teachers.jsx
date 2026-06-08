@@ -10,7 +10,7 @@ import {
 const LABELS_COLORS = ['#e8f0fe', '#fce8f3', '#fff3e0', '#e8f5e9', '#f3e5f5'];
 const LABELS_TEXT = ['#1565c0', '#c2185b', '#e65100', '#2e7d32', '#6a1b9a'];
 
-const COLS = ['Nomi', 'Guruh', 'Telefon raqamlari', "Tug'ilgan sanasi", 'Yaratilgan sana', ''];
+const COLS = ['Nomi', 'Guruh', 'Telefon raqami', 'Email', "Tug'ilgan sanasi", 'Yaratilgan sana', ''];
 
 const LabelBadge = ({ text, idx }) => (
   <span 
@@ -789,28 +789,22 @@ const Teachers = () => {
                 </div>
               </td></tr>
             ) : paginated.map((t, rowIdx) => {
-              const visibleLabels = t.labels.slice(0, 3);
-              const extra = t.labels.length - 3;
               return (
                 <tr key={t.id} className={`border-b border-[#f9f9fb] transition-colors duration-150 ${rowIdx % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'} hover:bg-[#f5f0ff]`}>
                   <td className="p-[10px_14px]">
                     <input type="checkbox" checked={t.selected} onChange={() => toggleSelect(t.id)} className="accent-[#7c4dff] w-[15px] h-[15px] cursor-pointer" />
                   </td>
-                  {/* Name + labels */}
+                  {/* Name */}
                   <td className="p-[10px_10px]">
                     <div className="flex items-center gap-2">
                       <Avatar name={t.name} photo={t.avatar} />
-                      <div>
-                        <div className="font-semibold text-[#1a1a2e] text-[13px] mb-[3px]">{t.name}</div>
-                        <div className="flex gap-1 flex-wrap">
-                          {visibleLabels.map((l, i) => <LabelBadge key={i} text={l} idx={i} />)}
-                          {extra > 0 && <span className="bg-[#f1f1f5] rounded-[6px] p-[2px_7px] text-[11px] text-[#6b7280] font-semibold">+{extra}</span>}
-                        </div>
-                      </div>
+                      <div className="font-semibold text-[#1a1a2e] text-[13px]">{t.name}</div>
                     </div>
                   </td>
-                  <td className="p-2.5 text-[#6b7280]">{t.guruh || '—'}</td>
+                  {/* Groups - show all as plain text */}
+                  <td className="p-2.5 text-[#6b7280]">{t.labels && t.labels.length > 0 ? t.labels.join(', ') : '—'}</td>
                   <td className="p-2.5 text-[#374151]">{t.phone}</td>
+                  <td className="p-2.5 text-[#6b7280]">{t.email || '—'}</td>
                   <td className="p-2.5 text-[#6b7280]">{t.born}</td>
                   <td className="p-2.5 text-[#6b7280]">{t.created}</td>
 
