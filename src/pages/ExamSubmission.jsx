@@ -99,13 +99,17 @@ export default function ExamSubmission() {
   const handleSave = async () => {
     setSaving(true); setErr(''); setSaved(false);
     try {
+      // Ball asosida status: 60 va undan yuqori → ACCEPTED, 59 va past → REJECTED
+      const newStatus = Number(score) >= 60 ? 'ACCEPTED' : 'REJECTED';
+
       // POST /api/v1/group/{groupId}/homework/{homeworkId}/check
-      // body: { grade, title, homework_answer_id }
+      // body: { grade, title, homework_answer_id, status }
       const answerId = result?.id || result?.homework_answer_id || result?.answer_id || Number(submissionId);
       const body = {
         grade: Number(score),
         title: comment || hw?.title || 'Baholandi',
         homework_answer_id: Number(answerId),
+        status: newStatus,
       };
       const res = await fetch(`${BASE}/group/${gid}/homework/${hwId}/check`, {
         method: 'POST',
@@ -114,7 +118,11 @@ export default function ExamSubmission() {
       });
       if (res.ok) {
         setSaved(true);
-        setTimeout(() => goBack(), 1000);
+        setTimeout(() => {
+          nav(isHwRoute ? `/classes/${gid}/homework/${hwId}` : `/classes/${gid}/exam/${hwId}`, {
+            state: { activeTab: newStatus }
+          });
+        }, 1000);
       } else {
         const e = await res.json().catch(() => ({}));
         setErr(e.message || `Xatolik: ${res.status}`);
@@ -251,72 +259,101 @@ export default function ExamSubmission() {
         )}
       </div>
 
-      {/* Ball berish */}
-      <div style={{ background:'white', borderRadius:12, boxShadow:'0 1px 8px rgba(0,0,0,0.06)', padding:24 }}>
-        {/* Info */}
-        <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'12px 16px', background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:8, marginBottom:24 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink:0, marginTop:2 }}>
-            <circle cx="12" cy="12" r="10" stroke="#3b82f6" strokeWidth="1.8"/>
-            <path d="M12 8v4m0 4h.01" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round"/>
-          </svg>
-          <p style={{ margin:0, fontSize:12.5, color:'#1d4ed8', fontWeight:500 }}>
-            60–100 oralig'ida ball qo'yilgan vazifa 'Qabul qilingan', 0–59 oralig'ida ball qo'yilgan vazifa 'Qaytarilgan' hisoblanadi
-          </p>
-        </div>
+      {/* Ball berish — FAQAT PENDING statusida */}
+      {rawSt === 'PENDING' ? (
+        <div style={{ background:'white', borderRadius:12, boxShadow:'0 1px 8px rgba(0,0,0,0.06)', padding:24 }}>
+          {/* Info */}
+          <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'12px 16px', background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:8, marginBottom:24 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink:0, marginTop:2 }}>
+              <circle cx="12" cy="12" r="10" stroke="#3b82f6" strokeWidth="1.8"/>
+              <path d="M12 8v4m0 4h.01" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+            <p style={{ margin:0, fontSize:12.5, color:'#1d4ed8', fontWeight:500 }}>
+              60–100 oralig'ida ball qo'yilgan vazifa 'Qabul qilingan', 0–59 oralig'ida ball qo'yilgan vazifa 'Qaytarilgan' hisoblanadi
+            </p>
+          </div>
 
-        {/* Slider */}
-        <div style={{ marginBottom:24 }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-            <label style={{ fontSize:15, fontWeight:700, color:'#1a1a2e' }}>Ball</label>
-            <div style={{ minWidth:44, height:36, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8, border:'1.5px solid #e5e7eb', fontWeight:700, fontSize:15, color: score >= 60 ? '#16a34a' : '#ef4444', padding:'0 8px' }}>
-              {score}
+          {/* Slider */}
+          <div style={{ marginBottom:24 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+              <label style={{ fontSize:15, fontWeight:700, color:'#1a1a2e' }}>Ball</label>
+              <div style={{ minWidth:44, height:36, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8, border:'1.5px solid #e5e7eb', fontWeight:700, fontSize:15, color: score >= 60 ? '#16a34a' : '#ef4444', padding:'0 8px' }}>
+                {score}
+              </div>
+            </div>
+            <input type="range" min={0} max={100} value={score}
+              onChange={e => setScore(Number(e.target.value))}
+              style={{ width:'100%', height:8, borderRadius:4, cursor:'pointer', outline:'none', appearance:'none', WebkitAppearance:'none',
+                background:`linear-gradient(to right, ${score >= 60 ? '#16a34a' : '#ef4444'} ${score}%, #e5e7eb ${score}%)`,
+                accentColor: score >= 60 ? '#16a34a' : '#ef4444' }} />
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:6, position:'relative' }}>
+              <span style={{ fontSize:11, color:'#9ca3af' }}>0</span>
+              <span style={{ fontSize:12, color:'#6b7280', fontWeight:500, position:'absolute', left:'60%', transform:'translateX(-50%)' }}>O'tish bali</span>
+              <span style={{ fontSize:11, color:'#9ca3af' }}>100</span>
             </div>
           </div>
-          <input type="range" min={0} max={100} value={score}
-            onChange={e => setScore(Number(e.target.value))}
-            style={{ width:'100%', height:8, borderRadius:4, cursor:'pointer', outline:'none', appearance:'none', WebkitAppearance:'none',
-              background:`linear-gradient(to right, ${score >= 60 ? '#16a34a' : '#ef4444'} ${score}%, #e5e7eb ${score}%)`,
-              accentColor: score >= 60 ? '#16a34a' : '#ef4444' }} />
-          <div style={{ display:'flex', justifyContent:'space-between', marginTop:6, position:'relative' }}>
-            <span style={{ fontSize:11, color:'#9ca3af' }}>0</span>
-            <span style={{ fontSize:12, color:'#6b7280', fontWeight:500, position:'absolute', left:'60%', transform:'translateX(-50%)' }}>O'tish bali</span>
-            <span style={{ fontSize:11, color:'#9ca3af' }}>100</span>
+
+          {/* Izoh textarea */}
+          <div style={{ marginBottom:20 }}>
+            <label style={{ fontSize:14, fontWeight:600, color:'#1a1a2e', display:'block', marginBottom:8 }}>Izohingiz</label>
+            <textarea value={comment} onChange={e => setComment(e.target.value)}
+              placeholder="Izohingiz (ixtiyoriy)" rows={4}
+              style={{ width:'100%', padding:'12px 16px', border:'1.5px solid #e5e7eb', borderRadius:10, fontSize:13, color:'#1a1a2e', outline:'none', resize:'none', fontFamily:'inherit', boxSizing:'border-box' }} />
+          </div>
+
+          {err && (
+            <div style={{ marginBottom:16, padding:'10px 16px', background:'#fee2e2', border:'1px solid #fecaca', borderRadius:8, color:'#dc2626', fontSize:13 }}>
+              {err}
+            </div>
+          )}
+          {saved && (
+            <div style={{ marginBottom:16, padding:'10px 16px', background:'#dcfce7', border:'1px solid #bbf7d0', borderRadius:8, color:'#16a34a', fontSize:13, fontWeight:600 }}>
+              ✓ Muvaffaqiyatli saqlandi! {score >= 60 ? 'Qabul qilingan' : 'Qaytarilgan'}
+            </div>
+          )}
+
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:12 }}>
+            <button onClick={goBack}
+              style={{ padding:'10px 28px', borderRadius:10, border:'1.5px solid #d1d5db', background:'white', color:'#374151', fontSize:14, fontWeight:600, cursor:'pointer' }}>
+              Bekor qilish
+            </button>
+            <button onClick={handleSave} disabled={saving || saved}
+              style={{ padding:'10px 28px', borderRadius:10, border:'none',
+                background: saving ? '#9ca3af' : '#16a34a',
+                color:'white', fontSize:14, fontWeight:600,
+                cursor: (saving || saved) ? 'not-allowed' : 'pointer' }}>
+              {saving ? 'Saqlanmoqda...' : saved ? 'Saqlandi ✓' : 'Yuborish'}
+            </button>
           </div>
         </div>
-
-        {/* Izoh textarea */}
-        <div style={{ marginBottom:20 }}>
-          <label style={{ fontSize:14, fontWeight:600, color:'#1a1a2e', display:'block', marginBottom:8 }}>Izohingiz</label>
-          <textarea value={comment} onChange={e => setComment(e.target.value)}
-            placeholder="Izohingiz (ixtiyoriy)" rows={4}
-            style={{ width:'100%', padding:'12px 16px', border:'1.5px solid #e5e7eb', borderRadius:10, fontSize:13, color:'#1a1a2e', outline:'none', resize:'none', fontFamily:'inherit', boxSizing:'border-box' }} />
-        </div>
-
-        {err && (
-          <div style={{ marginBottom:16, padding:'10px 16px', background:'#fee2e2', border:'1px solid #fecaca', borderRadius:8, color:'#dc2626', fontSize:13 }}>
-            {err}
+      ) : (
+        /* PENDING emas — faqat status ko'rsatiladi, form yo'q */
+        <div style={{ background:'white', borderRadius:12, boxShadow:'0 1px 8px rgba(0,0,0,0.06)', padding:24 }}>
+          <div style={{
+            padding:'16px 20px', borderRadius:10, display:'flex', alignItems:'center', gap:12,
+            background: rawSt === 'ACCEPTED' ? '#dcfce7' : rawSt === 'REJECTED' ? '#fee2e2' : '#f3f4f6',
+            border: `1px solid ${rawSt === 'ACCEPTED' ? '#bbf7d0' : rawSt === 'REJECTED' ? '#fecaca' : '#e5e7eb'}`
+          }}>
+            <span style={{ fontSize:22 }}>
+              {rawSt === 'ACCEPTED' ? '✅' : rawSt === 'REJECTED' ? '↩️' : '📭'}
+            </span>
+            <div>
+              <div style={{ fontSize:13, fontWeight:700, color: rawSt === 'ACCEPTED' ? '#16a34a' : rawSt === 'REJECTED' ? '#dc2626' : '#6b7280', marginBottom:2 }}>
+                {rawSt === 'ACCEPTED' ? 'Qabul qilingan' : rawSt === 'REJECTED' ? 'Qaytarilgan' : 'Vazifa topshirilmagan'}
+              </div>
+              <div style={{ fontSize:12, color:'#9ca3af' }}>
+                Bu vazifa tekshirilgan — qayta baho berish mumkin emas.
+              </div>
+            </div>
           </div>
-        )}
-        {saved && (
-          <div style={{ marginBottom:16, padding:'10px 16px', background:'#dcfce7', border:'1px solid #bbf7d0', borderRadius:8, color:'#16a34a', fontSize:13, fontWeight:600 }}>
-            ✓ Muvaffaqiyatli saqlandi! {score >= 60 ? 'Qabul qilingan' : 'Qaytarilgan'}
+          <div style={{ display:'flex', justifyContent:'flex-end', marginTop:16 }}>
+            <button onClick={goBack}
+              style={{ padding:'10px 28px', borderRadius:10, border:'1.5px solid #d1d5db', background:'white', color:'#374151', fontSize:14, fontWeight:600, cursor:'pointer' }}>
+              Orqaga
+            </button>
           </div>
-        )}
-
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:12 }}>
-          <button onClick={goBack}
-            style={{ padding:'10px 28px', borderRadius:10, border:'1.5px solid #d1d5db', background:'white', color:'#374151', fontSize:14, fontWeight:600, cursor:'pointer' }}>
-            Bekor qilish
-          </button>
-          <button onClick={handleSave} disabled={saving || saved}
-            style={{ padding:'10px 28px', borderRadius:10, border:'none',
-              background: saving ? '#9ca3af' : '#16a34a',
-              color:'white', fontSize:14, fontWeight:600,
-              cursor: (saving || saved) ? 'not-allowed' : 'pointer' }}>
-            {saving ? 'Saqlanmoqda...' : saved ? 'Saqlandi ✓' : 'Yuborish'}
-          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,7 @@ const CreateHomework = () => {
 
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState('');
   const [deadline, setDeadline] = useState('');
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -162,7 +163,15 @@ const CreateHomework = () => {
       fd.append('title', subject.trim());
       // Swagger: POST /api/v1/homework → multipart/form-data fields
       if (description.trim()) fd.append('description', description.trim());
-      if (deadline) fd.append('deadline', new Date(deadline).toISOString());
+      if (startDate) {
+        fd.append('start_date', new Date(startDate).toISOString());
+        fd.append('startDate', new Date(startDate).toISOString());
+      }
+      if (deadline) {
+        fd.append('deadline', new Date(deadline).toISOString());
+        fd.append('end_date', new Date(deadline).toISOString());
+        fd.append('due_date', new Date(deadline).toISOString());
+      }
       if (uploadedFile) fd.append('file', uploadedFile);
 
       const res = await fetch(`${BASE}/homework`, {
@@ -294,16 +303,42 @@ const CreateHomework = () => {
           </div>
         </div>
 
-        {/* ── Deadline ── */}
+        {/* ── Berilgan vaqt ── */}
         <div className="mb-7">
           <label className="block text-[13.5px] font-semibold text-[#1a1a2e] mb-2">
-            Tugash sanasi (ixtiyoriy)
+            Berilgan vaqt
+          </label>
+          <input
+            type="datetime-local"
+            value={startDate}
+            onChange={e => {
+              const val = e.target.value;
+              setStartDate(val);
+              if (val) {
+                const d = new Date(val);
+                d.setDate(d.getDate() + 2);
+                // datetime-local formatga o'tkazamiz: YYYY-MM-DDTHH:mm
+                const pad = (n) => String(n).padStart(2, '0');
+                const formatted = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                setDeadline(formatted);
+              } else {
+                setDeadline('');
+              }
+            }}
+            className="w-full px-4 py-3 bg-white border-[1.5px] border-[#e5e7eb] rounded-[10px] text-[13.5px] text-[#1a1a2e] outline-none focus:border-[#7c4dff] transition-colors"
+          />
+        </div>
+
+        {/* ── Tugash sanasi ── */}
+        <div className="mb-7">
+          <label className="block text-[13.5px] font-semibold text-[#1a1a2e] mb-2">
+            Tugash sanasi
           </label>
           <input
             type="datetime-local"
             value={deadline}
-            onChange={e => setDeadline(e.target.value)}
-            className="w-full px-4 py-3 bg-white border-[1.5px] border-[#e5e7eb] rounded-[10px] text-[13.5px] text-[#1a1a2e] outline-none focus:border-[#7c4dff] transition-colors"
+            readOnly
+            className="w-full px-4 py-3 bg-[#f3f4f6] border-[1.5px] border-[#e5e7eb] rounded-[10px] text-[13.5px] text-[#6b7280] outline-none cursor-not-allowed"
           />
         </div>
 

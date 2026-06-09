@@ -1202,7 +1202,7 @@ export default function GroupDetail() {
                         <td style={{ padding:'16px 16px', textAlign:'center', color:'#374151', fontWeight:600 }}>{hw.pending_count||0}</td>
                         <td style={{ padding:'16px 16px', textAlign:'center', color:'#374151', fontWeight:600 }}>{hw.checked_count||0}</td>
                         <td style={{ padding:'16px 16px', color:'#4b5563', fontWeight:500 }}>{fmtDateTime(hw.created_at||hw.createdAt)}</td>
-                        <td style={{ padding:'16px 16px', color:'#4b5563', fontWeight:500 }}>{fmtDateTime(hw.deadline||hw.end_date)}</td>
+                        <td style={{ padding:'16px 16px', color:'#4b5563', fontWeight:500 }}>{(function(){ var base = hw.created_at||hw.createdAt; if(!base) return '—'; var d = new Date(base); d.setDate(d.getDate()+2); return fmtDateTime(d.toISOString()); })()}</td>
                         <td style={{ padding:'16px 16px', color:'#4b5563', fontWeight:500 }}>{fmtDate(hw.lesson_date||hw.lessonDate||hw.date)}</td>
                         <td style={{ padding:'16px 16px', textAlign:'center' }}><MoreVertOutlined style={{ fontSize:18, color:'#9ca3af', cursor:'pointer' }} /></td>
                       </tr>

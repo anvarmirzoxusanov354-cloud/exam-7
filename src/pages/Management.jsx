@@ -20,7 +20,7 @@ const menuItems = [
   { icon: <MeetingRoomOutlined fontSize="small" />, label: 'Xonalar' },
 ];
 
-const filialTabs = ['Filial 1', 'Filial 2', 'Arxiv'];
+const filialTabs = ['Faol', 'Arxiv'];
 
 const initialCourseCards = [
   { id: 1, title: 'Human Resources Manager', desc: "A little about the company and the team that you'll be working with. A li...", duration: '90 min', period: '3 oy', price: '1 000 000 mln', bg: '#e8f0fe', border: '#c5d7fb' },
@@ -42,18 +42,18 @@ const KurslarContent = () => {
   const [search, setSearch] = useState('');
   const [courses, setCourses] = useState([]);
   const [archivedCourses, setArchivedCourses] = useState([]);
-  const [archivedLoading, setArchivedLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, title }
   const [form, setForm] = useState({
-    nomi: '', filiallar: ['Filial 1', 'Filial 2'],
+    nomi: '',
     darsDavomiyligi: '', kursDavomiyligi: '',
     narx: '', description: '', rangi: rangli[1],
   });
 
-  const resetForm = () => setForm({ nomi: '', filiallar: ['Filial 1', 'Filial 2'], darsDavomiyligi: '', kursDavomiyligi: '', narx: '', description: '', rangi: rangli[1] });
+  const resetForm = () => setForm({ nomi: '', darsDavomiyligi: '', kursDavomiyligi: '', narx: '', description: '', rangi: rangli[1] });
 
   const BASE_URL = 'https://najot-edu.softwareengineer.uz/api/v1';
 
@@ -79,19 +79,20 @@ const KurslarContent = () => {
       fetch(`${BASE_URL}/courses`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
       fetch(`${BASE_URL}/courses/archive`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
     ]).then(([activeData, archiveData]) => {
-      const toList = (d) => Array.isArray(d) ? d : (d?.data || d?.courses || []);
+      const toList = (d) => {
+        if (!d) return [];
+        if (Array.isArray(d)) return d;
+        const inner = d.data || d.courses || d.items || [];
+        return Array.isArray(inner) ? inner : [];
+      };
       setCourses(toList(activeData).map(mapCourse));
       setArchivedCourses(toList(archiveData).map(mapCourse));
       setLoading(false);
+    }).catch(() => {
+      setError('Kurslarni yuklashda xatolik yuz berdi. Sahifani yangilang.');
+      setLoading(false);
     });
   }, []);
-
-  const toggleFilial = (f) => {
-    setForm(prev => ({
-      ...prev,
-      filiallar: prev.filiallar.includes(f) ? prev.filiallar.filter(x => x !== f) : [...prev.filiallar, f],
-    }));
-  };
 
   const openAdd = () => { setEditId(null); resetForm(); setDrawerOpen(true); };
 
@@ -99,7 +100,6 @@ const KurslarContent = () => {
     setEditId(course.id);
     setForm({
       nomi: course.title,
-      filiallar: ['Filial 1', 'Filial 2'],
       darsDavomiyligi: course.duration,
       kursDavomiyligi: course.period,
       narx: course.price.replace(/[^0-9]/g, ''),
@@ -115,16 +115,51 @@ const KurslarContent = () => {
     const { id } = deleteConfirm;
     const token = localStorage.getItem('accessToken');
     try {
-      await fetch(`${BASE_URL}/courses/${id}`, {
+      const res = await fetch(`${BASE_URL}/courses/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch { /* ignore */ }
-    // UI da arxivga o'tkazamiz
-    const course = courses.find(c => c.id === id);
-    setCourses(prev => prev.filter(c => c.id !== id));
-    if (course) setArchivedCourses(prev => [...prev, course]);
+      if (res.ok) {
+        const course = courses.find(c => c.id === id);
+        setCourses(prev => prev.filter(c => c.id !== id));
+        if (course) setArchivedCourses(prev => [...prev, course]);
+      } else {
+        alert("Xatolik yuz berdi!");
+      }
+    } catch {
+      alert("Serverga ulanishda xatolik yuz berdi!");
+    }
     setDeleteConfirm(null);
+  };
+
+  // Arxivdan qayta tiklash - PATCH /api/v1/courses/{id}
+  const handleRestore = async (course) => {
+    const token = localStorage.getItem('accessToken');
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const body = {
+      name: course.title,
+      description: course.desc,
+      price: parseFloat(course.price.replace(/[^0-9]/g, '')) || 0,
+      duration_month: parseInt(course.period.replace(/[^0-9]/g, '')) || 3,
+      duration_hours: parseInt(course.duration.replace(/[^0-9]/g, '')) || 90,
+      is_active: true,
+      isActive: true,
+    };
+    try {
+      const res = await fetch(`${BASE_URL}/courses/${course.id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setArchivedCourses(prev => prev.filter(c => c.id !== course.id));
+        setCourses(prev => [...prev, course]);
+      } else {
+        alert("Kursni tiklashda xatolik yuz berdi!");
+      }
+    } catch {
+      alert("Server bilan ulanishda xatolik yuz berdi!");
+    }
   };
 
   const handleSave = async () => {
@@ -198,10 +233,38 @@ const KurslarContent = () => {
     setDrawerOpen(false);
   };
 
-  const filteredCourses = courses.filter(c =>
-    c.title.toLowerCase().includes(search.toLowerCase()) ||
-    c.desc.toLowerCase().includes(search.toLowerCase())
-  );
+  const isArchiveTab = activeFilial === filialTabs.length - 1;
+  const filteredCourses = (isArchiveTab ? archivedCourses : courses).filter(c => {
+    const title = (c.title || '').toLowerCase();
+    const desc = (c.desc || '').toLowerCase();
+    const q = search.toLowerCase();
+    return title.includes(q) || desc.includes(q);
+  });
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-[16px] p-5 shadow-[0_1px_8px_rgba(0,0,0,0.06)] flex items-center justify-center py-20">
+        <div className="flex items-center gap-2 text-[#9ca3af] text-[13px]">
+          <svg className="animate-spin h-4 w-4 text-[#7c4dff]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+          </svg>
+          Yuklanmoqda...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-[16px] p-5 shadow-[0_1px_8px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center py-20 gap-3">
+        <span className="text-[#ef5350] text-[13px]">{error}</span>
+        <button onClick={() => window.location.reload()} className="p-[8px_20px] rounded-[10px] border-none bg-[#7c4dff] text-white text-[13px] font-semibold cursor-pointer hover:opacity-90">
+          Qaytadan yuklash
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-[16px] p-5 shadow-[0_1px_8px_rgba(0,0,0,0.06)]">
@@ -258,20 +321,7 @@ const KurslarContent = () => {
               className="w-full p-[10px_14px] rounded-[10px] border-[1.5px] border-[#e5e7eb] text-[13.5px] outline-none box-border focus:border-[#7c4dff]" />
           </div>
 
-          {/* Filiallar */}
-          <div className="mb-[18px]">
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-[13px] font-semibold text-[#374151]">Kurs mavjud boledigon filiallar</label>
-              <button onClick={() => setForm({ ...form, filiallar: ['Filial 1', 'Filial 2'] })} className="bg-none border-none color-[#7c4dff] text-[12.5px] cursor-pointer font-semibold text-[#7c4dff]">Hammasini tanlash</button>
-            </div>
-            {['Filial 1', 'Filial 2'].map(f => (
-              <label key={f} className="flex items-center gap-2 mb-2 cursor-pointer text-[13.5px] text-[#374151]">
-                <input type="checkbox" checked={form.filiallar.includes(f)} onChange={() => toggleFilial(f)}
-                  className="accent-[#7c4dff] w-4 h-4 cursor-pointer" />
-                {f}
-              </label>
-            ))}
-          </div>
+
 
           {/* Dars davomiyligi */}
           <div className="mb-[18px]">
@@ -347,9 +397,11 @@ const KurslarContent = () => {
             <input placeholder="Search" value={search} onChange={e => setSearch(e.target.value)}
               className="w-full p-[8px_14px_8px_34px] rounded-[8px] border-[1.5px] border-[#e5e7eb] text-[13px] outline-none bg-white focus:border-[#7c4dff]" />
           </div>
-          <button onClick={openAdd} className="flex items-center gap-1.5 bg-[#7c4dff] text-white border-none rounded-[10px] p-[8px_16px] text-[13px] font-semibold cursor-pointer hover:opacity-90 whitespace-nowrap">
-            <AddOutlined fontSize="small" /> Kurslar qo'shish
-          </button>
+          {!isArchiveTab && (
+            <button onClick={openAdd} className="flex items-center gap-1.5 bg-[#7c4dff] text-white border-none rounded-[10px] p-[8px_16px] text-[13px] font-semibold cursor-pointer hover:opacity-90 whitespace-nowrap">
+              <AddOutlined fontSize="small" /> Kurslar qo'shish
+            </button>
+          )}
         </div>
       </div>
 
@@ -358,6 +410,9 @@ const KurslarContent = () => {
         {filialTabs.map((tab, i) => (
           <button key={i} onClick={() => setActiveFilial(i)} className={`p-[7px_16px] border-none rounded-[8px] cursor-pointer text-[13px] transition-all duration-150 ${activeFilial === i ? 'font-semibold bg-[#f0ebff] text-[#7c4dff]' : 'font-normal bg-[#f5f5fb] text-[#6b7280]'}`}>
             {tab}
+            {i === filialTabs.length - 1 && archivedCourses.length > 0 && (
+              <span className="ml-1.5 bg-[#9ca3af] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{archivedCourses.length}</span>
+            )}
           </button>
         ))}
       </div>
@@ -369,12 +424,21 @@ const KurslarContent = () => {
             <div className="flex justify-between items-start mb-1.5">
               <span className="font-semibold text-[13px] text-[#1a1a2e] leading-[1.4]">{card.title}</span>
               <div className="flex gap-1 shrink-0 ml-1.5">
-                <button onClick={() => setDeleteConfirm({ id: card.id, title: card.title })} className="bg-white/85 border-none rounded-[6px] p-1 cursor-pointer text-[#ef5350] flex transition-colors hover:bg-white">
-                  <DeleteOutlineOutlined style={{ fontSize: '14px' }} />
-                </button>
-                <button onClick={() => openEdit(card)} className="bg-white/85 border-none rounded-[6px] p-1 cursor-pointer text-[#7c4dff] flex transition-colors hover:bg-white">
-                  <EditOutlined style={{ fontSize: '14px' }} />
-                </button>
+                {isArchiveTab ? (
+                  <button onClick={() => handleRestore(card)}
+                    className="bg-white border border-[#7c4dff] rounded-[6px] px-2.5 py-1.5 cursor-pointer text-[#7c4dff] text-[11.5px] font-semibold shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:bg-[#f0ebff]">
+                    Tiklash
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={() => setDeleteConfirm({ id: card.id, title: card.title })} className="bg-white/85 border-none rounded-[6px] p-1 cursor-pointer text-[#ef5350] flex transition-colors hover:bg-white">
+                      <DeleteOutlineOutlined style={{ fontSize: '14px' }} />
+                    </button>
+                    <button onClick={() => openEdit(card)} className="bg-white/85 border-none rounded-[6px] p-1 cursor-pointer text-[#7c4dff] flex transition-colors hover:bg-white">
+                      <EditOutlined style={{ fontSize: '14px' }} />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <p className="text-[11.5px] text-[#6b7280] m-0 mb-2.5 leading-[1.5]">{card.desc}</p>

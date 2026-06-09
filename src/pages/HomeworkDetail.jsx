@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { KeyboardArrowLeftOutlined, DeleteOutlined } from '@mui/icons-material';
 
 const BASE   = 'https://najot-edu.softwareengineer.uz/api/v1';
@@ -66,6 +66,7 @@ const TABS = [
 export default function HomeworkDetail() {
   const { id: gid, homeworkId: hwId } = useParams();
   const nav = useNavigate();
+  const location = useLocation();
 
   const [hw,        setHw]        = useState(null);
   const [answers,   setAnswers]   = useState([]);
@@ -73,6 +74,13 @@ export default function HomeworkDetail() {
   const [tab,       setTab]       = useState('PENDING');
   const [deleting,  setDeleting]  = useState(false);
   const [showDel,   setShowDel]   = useState(false);
+
+  // Baho bergandan keyin to'g'ri tabga o'tish
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setTab(location.state.activeTab);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -121,7 +129,7 @@ export default function HomeworkDetail() {
             ...x,
             status: (x.status || 'PENDING').toUpperCase()
           }));
-          setAnswers(mapped);
+          setAnswers(dedupeAnswers(mapped));
           setLoading(false);
         } else {
           // Agar natija bo'lmasa, statuslar bo'yicha alohida chaqiramiz
@@ -139,12 +147,12 @@ export default function HomeworkDetail() {
             .then(r => r.ok ? r.json() : null)
             .then(d => {
               const list = toList(d);
-              return list.map(x => ({ ...x, _tab: t.key, status: x.status || t.key }));
+              return list.map(x => ({ ...x, _tab: t.key, status: (x.status || t.key).toUpperCase() }));
             })
             .catch(() => [])
         )
       ).then(all => {
-        setAnswers(all.flat());
+        setAnswers(dedupeAnswers(all.flat()));
         setLoading(false);
       }).catch(() => {
         setLoading(false);
@@ -174,10 +182,33 @@ export default function HomeworkDetail() {
     }
   };
 
+  // Bir student uchun faqat bitta yozuv: ACCEPTED > REJECTED > PENDING > CHECKED
+  function dedupeAnswers(list) {
+    const priority = { ACCEPTED: 4, REJECTED: 3, PENDING: 2, CHECKED: 1, NOT_SUBMITTED: 0, MISSING: 0 };
+    const map = {};
+    list.forEach(x => {
+      // Student ID ni topish — barcha mumkin maydonlarni tekshiramiz
+      const sid = String(
+        x.student_id ||
+        x.studentId ||
+        (x.student && (x.student.id || x.student.student_id)) ||
+        x.user_id ||
+        'u_' + (x.id || Math.random())
+      );
+      const st  = (x.status || '').toUpperCase();
+      const cur = map[sid];
+      if (!cur || (priority[st] ?? 0) > (priority[(cur.status || '').toUpperCase()] ?? 0)) {
+        map[sid] = { ...x, _resolvedStudentId: sid };
+      }
+    });
+    return Object.values(map);
+  }
+
   const byTab = k => {
     return answers.filter(x => {
       const st = (x.status || x._tab || '').toUpperCase();
       if (k === 'CHECKED') {
+        // Faqat topshirmagan studentlar: CHECKED, NOT_SUBMITTED, MISSING yoki bo'sh
         return st === 'CHECKED' || st === 'NOT_SUBMITTED' || st === 'MISSING' || st === '';
       }
       return st === k;
@@ -329,7 +360,7 @@ export default function HomeworkDetail() {
                   : (r.student_name || r.name || "Noma'lum");
                 const photo = r.student ? imgUrl(r.student.photo || r.student.avatar) : null;
                 // Swagger: GET /api/v1/group/{groupId}/homework/{homeworkId}/result/{studentId}
-                const navId = r.id || r.answer_id || r.homework_answer_id || r.student?.id || r.student_id;
+                const navId = r._resolvedStudentId || r.student?.id || r.student_id || r.id || r.answer_id || r.homework_answer_id;
                 const sentAt = fmt(r.submitted_at || r.created_at || r.createdAt);
                 const chkAt  = r.checked_at ? fmt(r.checked_at) : '—';
                 const score  = r.grade ?? r.score ?? r.ball;

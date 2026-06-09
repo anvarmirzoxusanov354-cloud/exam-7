@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { KeyboardArrowLeftOutlined, EditOutlined } from '@mui/icons-material';
 
 const BASE = 'https://najot-edu.softwareengineer.uz/api/v1';
@@ -25,6 +25,7 @@ const SUBTABS = [
 const ExamDetail = () => {
   const { id: groupId, examId: homeworkId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [homework, setHomework] = useState(null);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,8 +79,19 @@ const ExamDetail = () => {
       })
       .catch(() => {});
 
-    fetchResults('PENDING');
-  }, [groupId, homeworkId]);
+    // Baho bergandan keyin to'g'ri tabga o'tish
+    let initialStatus = 'PENDING';
+    if (location.state?.activeTab) {
+      const match = SUBTABS.find(t => t.status === location.state.activeTab);
+      if (match) {
+        setActiveTab(match.label);
+        initialStatus = match.status;
+      }
+    } else {
+      setActiveTab('Kutayotganlar');
+    }
+    fetchResults(initialStatus);
+  }, [groupId, homeworkId, location.state]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab.label);
@@ -171,7 +183,7 @@ const ExamDetail = () => {
                 const score = res.grade ?? res.score ?? res.ball;
                 const studentId = res.student?.id || res.student_id;
                 const submissionId = res.id || res.answer_id || res.homework_answer_id;
-                const navId = submissionId || studentId;
+                const navId = studentId || submissionId;
 
                 return (
                   <tr key={res.id || idx} className="border-b border-[#f5f5f7] hover:bg-[#fafafa] transition-colors">
