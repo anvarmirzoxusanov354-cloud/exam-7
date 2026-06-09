@@ -371,7 +371,7 @@ export default function HomeworkDetail() {
                   <tr key={r.id || i} style={{ borderBottom:'1px solid #f5f5f7', cursor:'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background='#fafafa'}
                     onMouseLeave={e => e.currentTarget.style.background='white'}
-                    onClick={() => { if (navId) nav(`/classes/${gid}/homework/${hwId}/result/${navId}`); }}>
+                    onClick={() => { if (navId) nav(`/classes/${gid}/homework/${hwId}/result/${navId}`, { state: { student: r.student || { id: navId, full_name: nm } } }); }}>
                     <td style={{ padding:'14px 24px' }}>
                       <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                         <div style={{ width:32, height:32, borderRadius:'50%', background:'#ede9ff', display:'flex',

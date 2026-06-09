@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 const BASE   = 'https://najot-edu.softwareengineer.uz/api/v1';
 const STATIC = 'https://najot-edu.softwareengineer.uz';
@@ -42,6 +42,7 @@ const STATUS_INFO = {
   ACCEPTED: { label:'Qabul qilingan',  bg:'#dcfce7', color:'#16a34a' },
   REJECTED: { label:'Qaytarilgan',     bg:'#fee2e2', color:'#ef4444' },
   CHECKED:  { label:'Tekshirilgan',    bg:'#ede9ff', color:'#7c4dff' },
+  NOT_SUBMITTED: { label:'Bajarilmagan', bg:'#f3f4f6', color:'#9ca3af' },
 };
 
 export default function ExamSubmission() {
@@ -49,6 +50,7 @@ export default function ExamSubmission() {
   //    va: /classes/:id/exam/:examId/submission/:submissionId
   const { id: gid, examId: hwId, submissionId } = useParams();
   const nav = useNavigate();
+  const location = useLocation();
   const token = localStorage.getItem('accessToken');
   const H = { Authorization: `Bearer ${token}` };
   const isHwRoute = window.location.pathname.includes('/homework/');
@@ -141,30 +143,23 @@ export default function ExamSubmission() {
     </div>
   );
 
-  if (!result) return (
-    <div style={{ paddingBottom:24 }}>
-      <div style={{ marginBottom:20 }}>
-        <button onClick={goBack} style={{ color:'#3b7cf7', fontWeight:600, fontSize:13, background:'none', border:'none', cursor:'pointer', padding:0 }}>
-          ← Orqaga
-        </button>
-      </div>
-      <div style={{ background:'white', borderRadius:12, boxShadow:'0 1px 8px rgba(0,0,0,0.06)', padding:'48px 24px', textAlign:'center' }}>
-        <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
-        <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:600, color:'#374151' }}>Natija topilmadi</p>
-        <p style={{ margin:0, fontSize:13, color:'#9ca3af' }}>Talaba hali javob yubormaganga o'xshaydi</p>
-      </div>
-    </div>
-  );
+  const displayResult = result || {
+    student: location.state?.student || { full_name: 'Talaba' },
+    status: 'NOT_SUBMITTED',
+    submitted_at: null,
+    files: [],
+    content: ''
+  };
 
-  const sName    = result.student
-    ? (result.student.full_name || `${result.student.first_name||''} ${result.student.last_name||''}`.trim() || result.student.name || 'Talaba')
-    : (result.student_name || 'Talaba');
-  const sPhoto   = result.student ? imgUrl(result.student.photo || result.student.avatar) : null;
-  const sentAt   = fmt(result.submitted_at || result.created_at || result.createdAt);
-  const files    = result.files || [];
-  const rawSt    = (result.status || 'PENDING').toUpperCase();
-  const si       = STATUS_INFO[rawSt] || STATUS_INFO.PENDING;
-  const content  = result.content || result.answer || result.description || '';
+  const sName    = displayResult.student
+    ? (displayResult.student.full_name || `${displayResult.student.first_name||''} ${displayResult.student.last_name||''}`.trim() || displayResult.student.name || 'Talaba')
+    : (displayResult.student_name || 'Talaba');
+  const sPhoto   = displayResult.student ? imgUrl(displayResult.student.photo || displayResult.student.avatar) : null;
+  const sentAt   = displayResult.submitted_at ? fmt(displayResult.submitted_at || displayResult.created_at || displayResult.createdAt) : '—';
+  const files    = displayResult.files || [];
+  const rawSt    = (displayResult.status || 'NOT_SUBMITTED').toUpperCase();
+  const si       = STATUS_INFO[rawSt] || STATUS_INFO.NOT_SUBMITTED;
+  const content  = displayResult.content || displayResult.answer || displayResult.description || '';
   const hwTitle  = hw?.title || hw?.name || hw?.topic || 'Uyga vazifa';
   const hwDesc   = hw?.description || hw?.content || '';
 
@@ -339,10 +334,12 @@ export default function ExamSubmission() {
             </span>
             <div>
               <div style={{ fontSize:13, fontWeight:700, color: rawSt === 'ACCEPTED' ? '#16a34a' : rawSt === 'REJECTED' ? '#dc2626' : '#6b7280', marginBottom:2 }}>
-                {rawSt === 'ACCEPTED' ? 'Qabul qilingan' : rawSt === 'REJECTED' ? 'Qaytarilgan' : 'Vazifa topshirilmagan'}
+                {rawSt === 'ACCEPTED' ? 'Qabul qilingan' : rawSt === 'REJECTED' ? 'Qaytarilgan' : 'Bajarilmagan'}
               </div>
               <div style={{ fontSize:12, color:'#9ca3af' }}>
-                Bu vazifa tekshirilgan — qayta baho berish mumkin emas.
+                {rawSt === 'ACCEPTED' || rawSt === 'REJECTED' 
+                  ? 'Bu vazifa tekshirilgan — qayta baho berish mumkin emas.' 
+                  : 'Talaba hali vazifa yubormagan.'}
               </div>
             </div>
           </div>

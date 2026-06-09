@@ -109,13 +109,13 @@ const KurslarContent = () => {
     setDrawerOpen(true);
   };
 
-  // DELETE /api/v1/courses/{id}
+  // DELETE /api/v1/courses/archive/{id}
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     const { id } = deleteConfirm;
     const token = localStorage.getItem('accessToken');
     try {
-      const res = await fetch(`${BASE_URL}/courses/${id}`, {
+      const res = await fetch(`${BASE_URL}/courses/archive/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

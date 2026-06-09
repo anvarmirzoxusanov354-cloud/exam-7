@@ -189,7 +189,7 @@ const ExamDetail = () => {
                   <tr key={res.id || idx} className="border-b border-[#f5f5f7] hover:bg-[#fafafa] transition-colors">
                     <td className="px-6 py-4">
                       <button
-                        onClick={() => { if (navId) navigate(`/classes/${groupId}/homework/${homeworkId}/result/${navId}`); }}
+                        onClick={() => { if (navId) navigate(`/classes/${groupId}/homework/${homeworkId}/result/${navId}`, { state: { student: res.student || { id: navId, full_name: studentName } } }); }}
                         className="text-[#3b7cf7] font-semibold text-[13px] bg-transparent border-none cursor-pointer hover:underline p-0">
                         {studentName}
                       </button>
@@ -205,7 +205,7 @@ const ExamDetail = () => {
                     </td>
                     <td className="px-4 py-4 text-right">
                       <button
-                        onClick={() => { if (navId) navigate(`/classes/${groupId}/homework/${homeworkId}/result/${navId}`); }}
+                        onClick={() => { if (navId) navigate(`/classes/${groupId}/homework/${homeworkId}/result/${navId}`, { state: { student: res.student || { id: navId, full_name: studentName } } }); }}
                         className="bg-transparent border-none cursor-pointer text-[#9ca3af] hover:text-[#7c4dff] transition-colors p-1">
                         <EditOutlined style={{ fontSize: 16 }} />
                       </button>
