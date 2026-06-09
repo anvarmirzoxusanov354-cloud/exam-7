@@ -109,20 +109,34 @@ const KurslarContent = () => {
     setDrawerOpen(true);
   };
 
-  // DELETE /api/v1/courses/archive/{id}
+  // Arxivga o'tkazish (o'chirish) - PATCH /api/v1/courses/{id}
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     const { id } = deleteConfirm;
+    const course = courses.find(c => c.id === id);
+    if (!course) { setDeleteConfirm(null); return; }
+
     const token = localStorage.getItem('accessToken');
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const body = {
+      name: course.title,
+      description: course.desc,
+      price: parseFloat(course.price.replace(/[^0-9]/g, '')) || 0,
+      duration_month: parseInt(course.period.replace(/[^0-9]/g, '')) || 3,
+      duration_hours: parseInt(course.duration.replace(/[^0-9]/g, '')) || 90,
+      is_active: false,
+      isActive: false,
+    };
+
     try {
-      const res = await fetch(`${BASE_URL}/courses/archive/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`${BASE_URL}/courses/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(body),
       });
       if (res.ok) {
-        const course = courses.find(c => c.id === id);
         setCourses(prev => prev.filter(c => c.id !== id));
-        if (course) setArchivedCourses(prev => [...prev, course]);
+        setArchivedCourses(prev => [...prev, course]);
       } else {
         alert("Xatolik yuz berdi!");
       }
